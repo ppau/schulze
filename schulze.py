@@ -33,7 +33,7 @@ def withdraw_candidate(candidate, candidates, ballots):
 def check_ballot(candidates, ballot):
     for i in range(len(ballot)):
         if ballot[i] == '':
-            ballot[i] = 0
+            ballot[i] = None
             continue
         
         try:
@@ -82,11 +82,15 @@ def count_ballots(candidates, ballots):
                     continue
 
                 # Both blank, neither are lt, thus fail
-                elif ballot[a] == ballot[b] == 0:
+                elif ballot[a] is ballot[b] is None:
+                    continue
+
+                # If a is blank, fail
+                elif ballot[a] is None:
                     continue
 
                 # all ints < blank or x < y
-                elif ballot[b] == 0 or ballot[a] < ballot[b]:
+                elif ballot[b] is None or ballot[a] < ballot[b]:
                     count[a][b] += 1
         
     return count
