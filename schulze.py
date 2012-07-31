@@ -24,6 +24,8 @@ def load_ballots(fn):
 
 
 def withdraw_candidate(candidate, candidates, ballots):
+    if candidate not in candidates:
+        return
     x = candidates.index(candidate)
     del candidates[x]
     for ballot in ballots:
@@ -126,11 +128,15 @@ def calculate_candidate_order(paths):
     return ranking
 
 
-def print_rankings(candidates, rankings):
+def print_rankings(candidates, rankings, winner_only=False):
     count = Counter()
     for i in range(len(candidates)):
         count[i] = rankings[i]
     count = count.most_common()
+
+    if winner_only:
+        print(candidates[count[0][0]])
+        return
 
     c = 0
     for k, v in count:
@@ -138,7 +144,7 @@ def print_rankings(candidates, rankings):
         print("(%s) %s" % (c, candidates[k]))
 
 
-def run_election(fn, *withdraws):
+def run_election(fn, *withdraws, winner_only=False):
     candidates, ballots = load_ballots(fn)
     for w in withdraws:
         withdraw_candidate(w, candidates, ballots)
@@ -146,15 +152,21 @@ def run_election(fn, *withdraws):
     paths = calculate_strongest_paths(count)
     rankings = calculate_candidate_order(paths)
     
-    print("Count matrix:")
-    print_matrix(count)
-    print()
+    if not winner_only:
+        print("Count matrix:")
+        print_matrix(count)
+        print()
 
-    print("Path matrix:")
-    print_matrix(paths)
-    print()
+        print("Path matrix:")
+        print_matrix(paths)
+        print()
 
-    print_rankings(candidates, rankings)
+    print_rankings(candidates, rankings, winner_only)
 
 if __name__ == "__main__":
-    run_election(sys.argv[1], *sys.argv[2:])
+    winner_only = False
+    if '-w' in sys.argv:
+        winner_only = True
+        del sys.argv[sys.argv.index('-w')]
+    
+    run_election(sys.argv[1], *sys.argv[2:], winner_only=winner_only)
