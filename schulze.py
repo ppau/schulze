@@ -81,7 +81,7 @@ def count_ballots(candidates, ballots):
                     continue
 
                 # If a is blank, it is always less than b if b != ''
-                elif ballot[a] == "":
+                elif ballot[a] == "" and ballot[b] != "":
                     count[a][b] += 1
 
                 # Blank is not lt any number
