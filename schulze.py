@@ -48,7 +48,7 @@ def check_ballot(candidates, ballot):
     
 
 def build_matrix(size):
-    x = [[0] * size] * size
+    x = [[0 for j in range(size)] for i in range(size)]
     for i in range(size):
         x[i][i] = None
     return x
