@@ -31,10 +31,20 @@ def withdraw_candidate(candidate, candidates, ballots):
 
 
 def check_ballot(candidates, ballot):
-    for b in ballot:
-        if b == '':
+    for i in range(len(ballot)):
+        if ballot[i] == '':
+            ballot[i] = 0
             continue
-        int(b)
+        
+        try:
+            if int(ballot[i]) <= 0:
+                return False
+        
+        except:
+            return False
+        
+        ballot[i] = int(ballot[i])
+    return True
     
 
 def build_matrix(size):
@@ -58,12 +68,7 @@ def count_ballots(candidates, ballots):
     count = build_matrix(len(candidates))
 
     for ballot in ballots:
-        valid = True
-        try:
-            check_ballot(candidates, ballot)
-        except Exception as e: 
-            valid = False
-        if not valid:
+        if not check_ballot(candidates, ballot):
             continue
 
         for a in range(len(ballot)):
@@ -77,19 +82,11 @@ def count_ballots(candidates, ballots):
                     continue
 
                 # Both blank, neither are lt, thus fail
-                elif ballot[a] == "" and ballot[b] == "":
+                elif ballot[a] == ballot[b] == 0:
                     continue
 
-                # If a is blank, it is always less than b if b != ''
-                elif ballot[a] == "" and ballot[b] != "":
-                    count[a][b] += 1
-
-                # Blank is not lt any number
-                elif int(ballot[a]) and ballot[b] == "":
-                    count[a][b] += 1
-
-                # Last actual check if both are ints
-                elif int(ballot[a]) < int(ballot[b]):
+                # all ints < blank or x < y
+                elif ballot[b] == 0 or ballot[a] < ballot[b]:
                     count[a][b] += 1
         
     return count
