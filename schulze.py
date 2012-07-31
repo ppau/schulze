@@ -68,17 +68,28 @@ def count_ballots(candidates, ballots):
 
 		for a in range(len(ballot)):
 			for b in range(len(ballot)):
+				# Skip same number
 				if a == b:
 					continue
-				if ballot[a] == ballot[b]: 
+
+				# Both equal, neither are lt, thus fail
+				elif ballot[a] == ballot[b]: 
 					continue
 
-				if ballot[a] == "": 
-					ballot[a] = sys.maxsize
-				if ballot[b] == "": 
-					ballot[b] = sys.maxsize
-			
-				if int(ballot[a]) < int(ballot[b]):
+				# Both blank, neither are lt, thus fail
+				elif ballot[a] == "" and ballot[b] == "":
+					continue
+
+				# If a is blank, it is always less than b if b != ''
+				elif ballot[a] == "":
+					count[a][b] += 1
+
+				# Blank is not lt any number
+				elif int(ballot[a]) and ballot[b] == "":
+					count[a][b] += 1
+
+				# Last actual check if both are ints
+				elif int(ballot[a]) < int(ballot[b]):
 					count[a][b] += 1
 		
 	return count
