@@ -66,13 +66,44 @@ def print_matrix(matrix):
     print(("+----" * len(line)) + "+")
 
 
+def calculate_first_prefs(candidates, ballots):
+    first_prefs = Counter()
+
+    for ballot in ballots:
+        if not check_ballot(candidates, ballot):
+            print("Invalid ballot: %s" % ballot)
+            continue
+        
+        highest = []
+        
+        for a in range(len(ballot)):
+            if ballot[a] is None:
+                pass
+            elif len(highest) < 1 or ballot[a] < ballot[highest[0]]:
+                highest = [a]
+            elif ballot[a] == ballot[highest[0]]:
+                highest.append(a)
+            
+        for i in highest:
+            first_prefs[candidates[i]] += 1
+    
+    return first_prefs
+
+
+def print_first_prefs(candidates, ballots):
+    fp = calculate_first_prefs(candidates, ballots)
+    for name, value in fp.most_common():
+        print("{:>12}: {:<2} [{}%]".format(name, value, "%.2f" % (value / sum(fp.values()) * 100)))
+
+
 def count_ballots(candidates, ballots):
     count = build_matrix(len(candidates))
 
     for ballot in ballots:
         if not check_ballot(candidates, ballot):
+            print("Invalid ballot: %s" % ballot)
             continue
-
+        
         for a in range(len(ballot)):
             for b in range(len(ballot)):
                 # Skip same number
@@ -94,7 +125,7 @@ def count_ballots(candidates, ballots):
                 # all ints < blank or x < y
                 elif ballot[b] is None or ballot[a] < ballot[b]:
                     count[a][b] += 1
-        
+    
     return count
 
 
@@ -144,15 +175,20 @@ def print_rankings(candidates, rankings, winner_only=False):
         print("(%s) %s" % (c, candidates[k]))
 
 
-def run_election(fn, *withdraws, winner_only=False):
+def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_prefs=False):
     candidates, ballots = load_ballots(fn)
     for w in withdraws:
         withdraw_candidate(w, candidates, ballots)
+    
+    if first_prefs:
+        print_first_prefs(candidates, ballots)
+        return
+    
     count = count_ballots(candidates, ballots)
     paths = calculate_strongest_paths(count)
     rankings = calculate_candidate_order(paths)
     
-    if not winner_only:
+    if not winner_only and not hide_grids:
         print("Count matrix:")
         print_matrix(count)
         print()
@@ -164,9 +200,18 @@ def run_election(fn, *withdraws, winner_only=False):
     print_rankings(candidates, rankings, winner_only)
 
 if __name__ == "__main__":
-    winner_only = False
+    args = {}
+
     if '-w' in sys.argv:
-        winner_only = True
+        args['winner_only'] = True
         del sys.argv[sys.argv.index('-w')]
     
-    run_election(sys.argv[1], *sys.argv[2:], winner_only=winner_only)
+    if '-s' in sys.argv:
+        args['hide_grids'] = True
+        del sys.argv[sys.argv.index('-s')]
+    
+    if '-f' in sys.argv:
+        args['first_prefs'] = True
+        del sys.argv[sys.argv.index('-f')]
+    
+    run_election(sys.argv[1], *sys.argv[2:], **args)
