@@ -72,6 +72,7 @@ def calculate_first_prefs(candidates, ballots):
     for ballot in ballots:
         if not check_ballot(candidates, ballot):
             print("Invalid ballot: %s" % ballot)
+            del ballot
             continue
         
         highest = []
@@ -92,8 +93,15 @@ def calculate_first_prefs(candidates, ballots):
 
 def print_first_prefs(candidates, ballots):
     fp = calculate_first_prefs(candidates, ballots)
+    
+    print("Total ballots: %s" % len(ballots))
     for name, value in fp.most_common():
-        print("{:>12}: {:<2} [{}%]".format(name, value, "%.2f" % (value / sum(fp.values()) * 100)))
+        print("{:>12}: {:<2} [All: {}%] [Compared: {}%]".format(
+            name,
+            value,
+            "%.2f" % (value / len(ballots) * 100),
+            "%.2f" % (value / sum(fp.values()) * 100)
+        ))
 
 
 def count_ballots(candidates, ballots):
