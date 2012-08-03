@@ -183,7 +183,7 @@ def print_rankings(candidates, rankings, winner_only=False):
         print("(%s) %s" % (c, candidates[k]))
 
 
-def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_prefs=False):
+def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_prefs=False, html=False):
     candidates, ballots = load_ballots(fn)
     for w in withdraws:
         withdraw_candidate(w, candidates, ballots)
@@ -198,7 +198,10 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
     
     if not winner_only and not hide_grids:
         print("Count matrix:")
-        print_matrix(count)
+        if html:
+            print(convert_matrix_to_html_table(candidates, count))
+        else:
+            print_matrix(count)
         print()
 
         print("Path matrix:")
@@ -207,8 +210,31 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
 
     print_rankings(candidates, rankings, winner_only)
 
+
+def convert_matrix_to_html_table(candidates, matrix):
+    x = ["<tr><th></th><th>" + "</th><th>".join(candidates) + "</th></tr>"]
+
+    for i in range(len(matrix)):
+        row = []
+        for j in range(len(matrix[i])):
+            if i == j:
+                row.append("<td style='background-color:gray'></td>")
+            elif matrix[i][j] < matrix[j][i]:
+                row.append("<td style='background-color:#fcc'>%s</td>" % matrix[i][j])
+            elif matrix[i][j] > matrix[j][i]:
+                row.append("<td style='background-color:#cfc'>%s</td>" % matrix[i][j])
+        x.append("<tr><th>%s</th>%s</tr>" % (candidates[i], "".join(row)))
+
+
+    return "<table><tbody>" + "".join(x) + "</tbody><table>"
+
+
 if __name__ == "__main__":
     args = {}
+    
+    if '-h' in sys.argv:
+        args['html'] = True
+        del sys.argv[sys.argv.index('-h')]
 
     if '-w' in sys.argv:
         args['winner_only'] = True
