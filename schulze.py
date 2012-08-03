@@ -193,15 +193,16 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
         return
     
     count = count_ballots(candidates, ballots)
+    if html:
+        print(convert_matrix_to_html_table(candidates, count))
+        return 
+    
     paths = calculate_strongest_paths(count)
     rankings = calculate_candidate_order(paths)
     
     if not winner_only and not hide_grids:
         print("Count matrix:")
-        if html:
-            print(convert_matrix_to_html_table(candidates, count))
-        else:
-            print_matrix(count)
+        print_matrix(count)
         print()
 
         print("Path matrix:")
@@ -212,26 +213,29 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
 
 
 def convert_matrix_to_html_table(candidates, matrix):
-    x = ["<tr><th></th><th>" + "</th><th>".join(candidates) + "</th></tr>"]
+    x = ["<tr><th></th><th style='border: 1px solid gray'>" + 
+            "</th><th style='border: 1px solid gray'>".join(candidates) + 
+            "</th></tr>"]
 
     for i in range(len(matrix)):
         row = []
         for j in range(len(matrix[i])):
             if i == j:
-                row.append("<td style='background-color:gray'></td>")
+                row.append("<td style='border: 1px dotted gray; background-color:#ddd'></td>")
             elif matrix[i][j] < matrix[j][i]:
-                row.append("<td style='background-color:#fcc'>%s</td>" % matrix[i][j])
+                row.append("<td style='border: 1px dotted gray; background-color:#fcc'>%s</td>" % matrix[i][j])
             elif matrix[i][j] > matrix[j][i]:
-                row.append("<td style='background-color:#cfc'>%s</td>" % matrix[i][j])
-        x.append("<tr><th>%s</th>%s</tr>" % (candidates[i], "".join(row)))
+                row.append("<td style='border: 1px dotted gray; background-color:#cfc'>%s</td>" % matrix[i][j])
+        x.append("<tr><th style='border: 1px solid gray'>%s</th>%s</tr>" % (candidates[i], "".join(row)))
 
-
-    return "<table><tbody>" + "".join(x) + "</tbody><table>"
+    return "<table style='border-collapse: collapse; border: 1px solid black'><tbody>" + "".join(x) + "</tbody><table>"
 
 
 if __name__ == "__main__":
     args = {}
-    
+   
+    # TODO: make this sane, obviously. This is just derpy.
+
     if '-h' in sys.argv:
         args['html'] = True
         del sys.argv[sys.argv.index('-h')]
