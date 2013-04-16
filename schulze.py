@@ -162,8 +162,8 @@ def calculate_candidate_order(paths):
         for j in range(len(paths)):
             if i == j: continue
             if paths[i][j] > paths[j][i]:
-                ranking[i] += 1
-    
+                ranking[i] += paths[i][j]
+
     return ranking
 
 
@@ -187,19 +187,23 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
     candidates, ballots = load_ballots(fn)
     for w in withdraws:
         withdraw_candidate(w, candidates, ballots)
-    
+
     if first_prefs:
         print_first_prefs(candidates, ballots)
         return
-    
+
     count = count_ballots(candidates, ballots)
-    if html:
-        print(convert_matrix_to_html_table(candidates, count))
-        return 
-    
     paths = calculate_strongest_paths(count)
     rankings = calculate_candidate_order(paths)
-    
+
+    if html:
+        print(convert_matrix_to_html_table(candidates, count))
+        print(strongest_path_html(candidates, paths))
+        print("<pre>")
+        print_rankings(candidates, rankings, winner_only)
+        print("</pre>")
+        return
+
     if not winner_only and not hide_grids:
         print("Count matrix:")
         print_matrix(count)
@@ -212,23 +216,71 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
     print_rankings(candidates, rankings, winner_only)
 
 
-def convert_matrix_to_html_table(candidates, matrix):
-    x = ["<tr><th></th><th style='border: 1px solid gray'>" + 
-            "</th><th style='border: 1px solid gray'>".join(candidates) + 
-            "</th></tr>"]
+def strongest_path_html(candidates, matrix):
+    cross = "&times;"
+    info = "These are the strongest paths. This is required to determine a winner in the case of no obvious majority pairwise winner."
+    headers = "<th class='empty'></th><th><div>" +\
+        "</div></th><th><div>".join(candidates) + "</div></th>"
+    x = []
 
     for i in range(len(matrix)):
         row = []
         for j in range(len(matrix[i])):
             if i == j:
-                row.append("<td style='border: 1px dotted gray; background-color:#ddd'></td>")
-            elif matrix[i][j] < matrix[j][i]:
-                row.append("<td style='border: 1px dotted gray; background-color:#fcc'>%s</td>" % matrix[i][j])
-            elif matrix[i][j] > matrix[j][i]:
-                row.append("<td style='border: 1px dotted gray; background-color:#cfc'>%s</td>" % matrix[i][j])
-        x.append("<tr><th style='border: 1px solid gray'>%s</th>%s</tr>" % (candidates[i], "".join(row)))
+                row.append("<td></td>")
+                continue
 
-    return "<table style='border-collapse: collapse; border: 1px solid black'><tbody>" + "".join(x) + "</tbody><table>"
+            total = matrix[i][j] + matrix[j][i]
+            if total != 0:
+                success = int(matrix[i][j] / total * 100)
+                fail = 100 - success
+            else:
+                success = fail = 0
+            if matrix[i][j] < matrix[j][i]:
+                row.append("<td class='red'>%s</td>" % cross)
+            elif matrix[i][j] > matrix[j][i]:
+                row.append("<td class='green'>%s</td>" % matrix[i][j])
+            elif matrix[i][j] == matrix[j][i]:
+                row.append("<td class='yellow'>%s</td>" % cross)
+        x.append("<tr><th>%s</th>%s</tr>" % (candidates[i], "".join(row)))
+
+    return ("<table><caption>%s</caption><thead>%s</thead><tbody>" % (info, headers)) + "".join(x) + "</tbody></table>"
+
+def convert_matrix_to_html_table(candidates, matrix):
+    info = "The horizontal axis is compared with the vertical axis to see who is the most preferred candidate. The ranking order is determined by the candidates with the most green squares."
+    headers = "<th class='empty'></th><th><div>" +\
+        "</div></th><th><div>".join(candidates) + "</div></th>"
+    x = []
+
+    for i in range(len(matrix)):
+        row = []
+        for j in range(len(matrix[i])):
+            if i == j:
+                row.append("<td></td>")
+                continue
+
+            title = candidates[i] + ' vs ' + candidates[j]
+            total = matrix[i][j] + matrix[j][i]
+            if total != 0:
+                success = int(matrix[i][j] / total * 100)
+                fail = 100 - success
+            else:
+                success = fail = 0
+            content = ('<p>%s voters prefer %s over %s.</p><div class="progress">' +\
+                '<div class="bar bar-success" style="width: %s%%">%s</div>' +\
+                '<div class="bar bar-danger" style="width: %s%%">%s</div>' +\
+            '</div>') % (matrix[i][j], candidates[i], candidates[j],
+                    success, "%s (%s%%)" % (matrix[i][j], success),
+                    fail, "%s (%s%%)" % (matrix[j][i], fail))
+            if matrix[i][j] < matrix[j][i]:
+                row.append("<td title='%s' data-content='%s' class='red'>%s</td>" % (title, content, matrix[i][j]))
+            elif matrix[i][j] > matrix[j][i]:
+                row.append("<td title='%s' data-content='%s' class='green'>%s</td>" % (title, content, matrix[i][j]))
+            elif matrix[i][j] == matrix[j][i]:
+                row.append("<td title='%s' data-content='%s' class='yellow'>%s</td>" % (title, content, matrix[i][j]))
+        x.append("<tr><th>%s</th>%s</tr>" % (candidates[i], "".join(row)))
+
+    return ("<table><caption>%s</caption><thead>%s</thead><tbody>" % (info, headers)) + "".join(x) + "</tbody></table>"
 
 
 if __name__ == "__main__":
