@@ -175,7 +175,7 @@ def break_ties(paths, ranking):
         for j in range(len(paths)):
             if i == j: continue
             if paths[i][j] > paths[j][i]:
-                scores[i] += paths[i][j]
+                scores[i] += paths[i][j] - paths[j][i]
 
     return scores
 
@@ -213,7 +213,7 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
     tie = False
     if rankings.count(max(rankings)):
         tie = True
-        rankings = break_ties(paths, rankings)
+        rankings = break_ties(count, rankings)
 
     if html:
         print(convert_matrix_to_html_table(candidates, count))
@@ -310,7 +310,7 @@ def convert_matrix_to_html_table(candidates, matrix):
                 row.append("<td title='%s' data-content='%s' class='yellow'>%s</td>" % (title, content, matrix[i][j]))
         x.append("<tr><th>%s</th>%s</tr>" % (candidates[i], "".join(row)))
 
-    return ("<table><caption>%s</caption><thead>%s</thead><tbody>" % (info, headers)) + "".join(x) + "</tbody></table>"
+    return ("<table class='ranking'><caption>%s</caption><thead>%s</thead><tbody>" % (info, headers)) + "".join(x) + "</tbody></table>"
 
 
 if __name__ == "__main__":
