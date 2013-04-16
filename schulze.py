@@ -156,15 +156,28 @@ def calculate_strongest_paths(count):
     return paths
 
 
-def calculate_candidate_order(paths):
+def determine_rankings(paths):
     ranking = [0 for i in range(len(paths))]
     for i in range(len(paths)):
         for j in range(len(paths)):
             if i == j: continue
             if paths[i][j] > paths[j][i]:
-                ranking[i] += paths[i][j]
+                ranking[i] += 1
 
     return ranking
+
+
+def break_ties(paths, ranking):
+    scores = [0 for i in range(len(paths))]
+    for i in range(len(paths)):
+        if ranking[i] == 0:
+            continue
+        for j in range(len(paths)):
+            if i == j: continue
+            if paths[i][j] > paths[j][i]:
+                scores[i] += paths[i][j]
+
+    return scores
 
 
 def print_rankings(candidates, rankings, winner_only=False):
@@ -194,12 +207,23 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
 
     count = count_ballots(candidates, ballots)
     paths = calculate_strongest_paths(count)
-    rankings = calculate_candidate_order(paths)
+    rankings = determine_rankings(paths)
+
+    # check to see if highest rank is shared
+    tie = False
+    if rankings.count(max(rankings)):
+        tie = True
+        rankings = break_ties(paths, rankings)
 
     if html:
         print(convert_matrix_to_html_table(candidates, count))
         print(strongest_path_html(candidates, paths))
         print("<pre>")
+        if tie:
+            print("Tie detected. Ranking by strongest path scores:\n")
+            for i in range(len(candidates)):
+                print("%s: %s" % (candidates[i], rankings[i]))
+            print()
         print_rankings(candidates, rankings, winner_only)
         print("</pre>")
         return
@@ -212,6 +236,12 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
         print("Path matrix:")
         print_matrix(paths)
         print()
+
+        if tie:
+            print("Tie detected. Ranking by combined strongest path scores:\n")
+            for i in range(len(candidates)):
+                print("%s: %s" % (candidates[i], rankings[i]))
+            print()
 
     print_rankings(candidates, rankings, winner_only)
 
