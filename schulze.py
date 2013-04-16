@@ -211,7 +211,7 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
 
     # check to see if highest rank is shared
     tie = False
-    if rankings.count(max(rankings)):
+    if rankings.count(max(rankings)) > 1:
         tie = True
         rankings = break_ties(count, rankings)
 
@@ -249,8 +249,8 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
 def strongest_path_html(candidates, matrix):
     cross = "&times;"
     info = "These are the strongest paths. This is required to determine a winner in the case of no obvious majority pairwise winner."
-    headers = "<th class='empty'></th><th><div>" +\
-        "</div></th><th><div>".join(candidates) + "</div></th>"
+    headers = "<tr><th class='empty'></th><th><div>" +\
+        "</div></th><th><div>".join(candidates) + "</div></th></tr>"
     x = []
 
     for i in range(len(matrix)):
@@ -278,8 +278,8 @@ def strongest_path_html(candidates, matrix):
 
 def convert_matrix_to_html_table(candidates, matrix):
     info = "The horizontal axis is compared with the vertical axis to see who is the most preferred candidate. The ranking order is determined by the candidates with the most green squares."
-    headers = "<th class='empty'></th><th><div>" +\
-        "</div></th><th><div>".join(candidates) + "</div></th>"
+    headers = '<tr><th class="empty"></th><th><div>' +\
+        "</div></th><th><div>".join(candidates) + "</div></th></tr>"
     x = []
 
     for i in range(len(matrix)):
@@ -296,21 +296,21 @@ def convert_matrix_to_html_table(candidates, matrix):
                 fail = 100 - success
             else:
                 success = fail = 0
-            content = ('<p>%s voters prefer %s over %s.</p><div class="progress">' +\
-                '<div class="bar bar-success" style="width: %s%%">%s</div>' +\
-                '<div class="bar bar-danger" style="width: %s%%">%s</div>' +\
-            '</div>') % (matrix[i][j], candidates[i], candidates[j],
+            content = ('''<p>%s voters prefer %s over %s.</p><div class='progress'>''' +\
+                '''<div class='bar bar-success' style='width: %s%%'>%s</div>''' +\
+                '''<div class='bar bar-danger' style='width: %s%%'>%s</div>''' +\
+            '''</div>''') % (matrix[i][j], candidates[i], candidates[j],
                     success, "%s (%s%%)" % (matrix[i][j], success),
                     fail, "%s (%s%%)" % (matrix[j][i], fail))
             if matrix[i][j] < matrix[j][i]:
-                row.append("<td title='%s' data-content='%s' class='red'>%s</td>" % (title, content, matrix[i][j]))
+                row.append('<td title="%s" data-content="%s" class="red">%s</td>' % (title, content, matrix[i][j]))
             elif matrix[i][j] > matrix[j][i]:
-                row.append("<td title='%s' data-content='%s' class='green'>%s</td>" % (title, content, matrix[i][j]))
+                row.append('<td title="%s" data-content="%s" class="green">%s</td>' % (title, content, matrix[i][j]))
             elif matrix[i][j] == matrix[j][i]:
-                row.append("<td title='%s' data-content='%s' class='yellow'>%s</td>" % (title, content, matrix[i][j]))
+                row.append('<td title="%s" data-content="%s" class="yellow">%s</td>' % (title, content, matrix[i][j]))
         x.append("<tr><th>%s</th>%s</tr>" % (candidates[i], "".join(row)))
 
-    return ("<table class='ranking'><caption>%s</caption><thead>%s</thead><tbody>" % (info, headers)) + "".join(x) + "</tbody></table>"
+    return ('<table class="ranking"><caption>%s</caption><thead>%s</thead><tbody>' % (info, headers)) + "".join(x) + "</tbody></table>"
 
 
 if __name__ == "__main__":
