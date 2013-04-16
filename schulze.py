@@ -217,7 +217,7 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
 
     if html:
         print(convert_matrix_to_html_table(candidates, count))
-        print(strongest_path_html(candidates, paths))
+        #print(strongest_path_html(candidates, paths))
         print("<pre>")
         if tie:
             print("Tie detected. Ranking by strongest path scores:\n")
