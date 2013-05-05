@@ -1,6 +1,10 @@
 from collections import defaultdict, Counter
+from urllib.parse import quote
+from io import StringIO
+
 import json
 import sys
+import argparse
 
 """
 Ballots are csv's.
@@ -16,8 +20,8 @@ smith,jones,james
 ,4,4
 """
 
-def load_ballots(fn):
-    lines = open(fn, 'r').readlines()
+def load_ballots(f):
+    lines = f.readlines()
     header = lines[0].strip().split(',')
     ballots = [line.strip().split(',') for line in lines[1:]]
     return header, ballots 
@@ -104,12 +108,13 @@ def print_first_prefs(candidates, ballots):
         ))
 
 
-def count_ballots(candidates, ballots):
+def count_ballots(candidates, ballots, show_errors=False):
     count = build_matrix(len(candidates))
 
     for ballot in ballots:
         if not check_ballot(candidates, ballot):
-            print("Invalid ballot: %s" % ballot)
+            if show_errors:
+                print("Invalid ballot: %s" % ballot)
             continue
         
         for a in range(len(ballot)):
@@ -191,32 +196,15 @@ def print_rankings(candidates, rankings, winner_only=False):
         return
 
     c = 0
+    print("Rankings:\n")
     for k, v in count:
         c += 1
         print("(%s) %s" % (c, candidates[k]))
 
 
-def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_prefs=False, html=False):
-    candidates, ballots = load_ballots(fn)
-    for w in withdraws:
-        withdraw_candidate(w, candidates, ballots)
-
-    if first_prefs:
-        print_first_prefs(candidates, ballots)
-        return
-
-    count = count_ballots(candidates, ballots)
-    paths = calculate_strongest_paths(count)
-    rankings = determine_rankings(paths)
-
-    # check to see if highest rank is shared
-    tie = False
-    if rankings.count(max(rankings)) > 1:
-        tie = True
-        rankings = break_ties(count, rankings)
-
+def output(candidates, paths, rankings, count, tie, winner_only=False, html=False, urlencode=False, hide_grids=False):
     if html:
-        print(convert_matrix_to_html_table(candidates, count))
+        print(convert_matrix_to_html_table(candidates, count, urlencode))
         #print(strongest_path_html(candidates, paths))
         print("<pre>")
         if tie:
@@ -244,6 +232,30 @@ def run_election(fn, *withdraws, winner_only=False, hide_grids=False, first_pref
             print()
 
     print_rankings(candidates, rankings, winner_only)
+
+
+def run_election(f, *withdraws, winner_only=False, hide_grids=False, first_prefs=False, html=False, urlencode=False, show_errors=False):
+    if isinstance(f, str):
+        f = StringIO(f)
+    candidates, ballots = load_ballots(f)
+    for w in withdraws:
+        withdraw_candidate(w, candidates, ballots)
+
+    if first_prefs:
+        print_first_prefs(candidates, ballots)
+        return
+
+    count = count_ballots(candidates, ballots, show_errors)
+    paths = calculate_strongest_paths(count)
+    rankings = determine_rankings(paths)
+
+    # check to see if highest rank is shared
+    tie = False
+    if rankings.count(max(rankings)) > 1:
+        tie = True
+        rankings = break_ties(count, rankings)
+
+    output(candidates, paths, rankings, count, tie, winner_only, html, urlencode, hide_grids)
 
 
 def strongest_path_html(candidates, matrix):
@@ -276,11 +288,13 @@ def strongest_path_html(candidates, matrix):
 
     return ("<table><caption>%s</caption><thead>%s</thead><tbody>" % (info, headers)) + "".join(x) + "</tbody></table>"
 
-def convert_matrix_to_html_table(candidates, matrix):
+
+def convert_matrix_to_html_table(candidates, matrix, urlencode):
     info = "The horizontal axis is compared with the vertical axis to see who is the most preferred candidate. The ranking order is determined by the candidates with the most green squares."
     headers = '<tr><th class="empty"></th><th><div>' +\
         "</div></th><th><div>".join(candidates) + "</div></th></tr>"
     x = []
+    data = {}
 
     for i in range(len(matrix)):
         row = []
@@ -302,36 +316,41 @@ def convert_matrix_to_html_table(candidates, matrix):
             '''</div>''') % (matrix[i][j], candidates[i], candidates[j],
                     success, "%s (%s%%)" % (matrix[i][j], success),
                     fail, "%s (%s%%)" % (matrix[j][i], fail))
+            data[title] = content
             if matrix[i][j] < matrix[j][i]:
-                row.append('<td title="%s" data-content="%s" class="red">%s</td>' % (title, content, matrix[i][j]))
+                row.append('<td title="%s" class="red">%s</td>' % (title, matrix[i][j]))
             elif matrix[i][j] > matrix[j][i]:
-                row.append('<td title="%s" data-content="%s" class="green">%s</td>' % (title, content, matrix[i][j]))
+                row.append('<td title="%s" class="green">%s</td>' % (title, matrix[i][j]))
             elif matrix[i][j] == matrix[j][i]:
-                row.append('<td title="%s" data-content="%s" class="yellow">%s</td>' % (title, content, matrix[i][j]))
+                row.append('<td title="%s" class="yellow">%s</td>' % (title, matrix[i][j]))
         x.append("<tr><th>%s</th>%s</tr>" % (candidates[i], "".join(row)))
 
-    return ('<table class="ranking"><caption>%s</caption><thead>%s</thead><tbody>' % (info, headers)) + "".join(x) + "</tbody></table>"
+    return ('<script>var electionData = \n%s\n</script><table class="ranking"><caption>%s</caption><thead>%s</thead><tbody>' % (script_data(data, urlencode), info, headers)) + "".join(x) + "</tbody></table>"
+
+
+def script_data(data, urlencode):
+    if not urlencode:
+        return json.dumps(data, indent=2)
+    else:
+        return 'JSON.parse(decodeURIComponent("%s"))' % quote(json.dumps(data))
 
 
 if __name__ == "__main__":
-    args = {}
-   
-    # TODO: make this sane, obviously. This is just derpy.
+    p = argparse.ArgumentParser()
+    p.add_argument('-H', '--html', action='store_true',
+            help="Output HTML")
+    p.add_argument('-U', '--urlencode', action='store_true')
+    p.add_argument('-w', '--winner-only', action='store_true')
+    p.add_argument('-s', '--hide-grids', action='store_true')
+    p.add_argument('-f', '--first-prefs', action='store_true')
+    p.add_argument('--show-errors', action='store_true')
+    p.add_argument('--withdraw', nargs='*',
+            help="Candidates to withdraw from election")
+    p.add_argument('ballots', type=argparse.FileType('r'))
+    args = dict(p.parse_args()._get_kwargs())
+    ballots = args.get('ballots')
+    withdraw = args.get('withdraw') or []
 
-    if '-h' in sys.argv:
-        args['html'] = True
-        del sys.argv[sys.argv.index('-h')]
-
-    if '-w' in sys.argv:
-        args['winner_only'] = True
-        del sys.argv[sys.argv.index('-w')]
-    
-    if '-s' in sys.argv:
-        args['hide_grids'] = True
-        del sys.argv[sys.argv.index('-s')]
-    
-    if '-f' in sys.argv:
-        args['first_prefs'] = True
-        del sys.argv[sys.argv.index('-f')]
-    
-    run_election(sys.argv[1], *sys.argv[2:], **args)
+    del args['withdraw']
+    del args['ballots']
+    run_election(ballots, *withdraw, **args)
