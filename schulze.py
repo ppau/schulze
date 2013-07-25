@@ -5,6 +5,7 @@ from io import StringIO
 import json
 import sys
 import argparse
+import uuid
 
 """
 Ballots are csv's.
@@ -217,6 +218,10 @@ def output(candidates, paths, rankings, count, tie, winner_only=False, html=Fals
         return
 
     if not winner_only and not hide_grids:
+        print("Matrix order (left to right & top to bottom):")
+        print('- ' + '\n- '.join(candidates))
+        print()
+
         print("Count matrix:")
         print_matrix(count)
         print()
@@ -325,8 +330,40 @@ def convert_matrix_to_html_table(candidates, matrix, urlencode):
                 row.append('<td title="%s" class="yellow">%s</td>' % (title, matrix[i][j]))
         x.append("<tr><th>%s</th>%s</tr>" % (candidates[i], "".join(row)))
 
-    return ('<script>var electionData = \n%s\n</script><table class="ranking"><caption>%s</caption><thead>%s</thead><tbody>' % (script_data(data, urlencode), info, headers)) + "".join(x) + "</tbody></table>"
+    uniq = uuid.uuid4().hex
+    out = """<script data-cfasync="false">var electionData{uniq} = {script}\n</script>
+        <table id='election-{uniq}' class="ranking">
+        <caption>{caption}</caption>
+        <thead>{thead}</thead>
+        <tbody>{tbody}</tbody>
+        </table>""".format(
+            uniq=uniq,
+            script=script_data(data, urlencode),
+            caption=info,
+            thead=headers,
+            tbody="".join(x)
+        )
 
+    out += """<script data-cfasync="false">
+      $("#election-{uniq} thead th").each(function() {{
+        var div = $(this).find("div");
+        div.addClass('vertical');
+        $(this).height(div.width());
+        div.css('width', '1em');
+      }});
+      $("#election-{uniq} [title]").each(function() {{
+        var self = $(this);
+          $(this).popover({{
+            placement: 'bottom',
+            container: ".entry-content",
+            trigger: "hover",
+            animation: false,
+            html: true,
+            content: electionData{uniq}[self.attr('title')]
+          }});
+        }});</script>""".format(uniq=uniq)
+
+    return out
 
 def script_data(data, urlencode):
     if not urlencode:
