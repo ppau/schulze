@@ -98,5 +98,6 @@ if __name__ == "__main__":
             run_election(csv, *args.withdraw or [], **{
                 "show_errors": args.show_errors,
                 "html": args.html,
-                "urlencode": True
+                "urlencode": True,
+                "first_prefs": True
             })
